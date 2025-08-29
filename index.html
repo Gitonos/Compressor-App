@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Image Compressor</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-100 flex flex-col items-center p-4 sm:p-6">
+    <!-- Main container with responsive design -->
+    <div class="bg-white shadow-xl rounded-2xl p-6 sm:p-8 w-full max-w-lg md:max-w-3xl lg:max-w-4xl mt-8">
+        <h1 class="text-3xl sm:text-4xl font-bold text-center text-gray-800 mb-6">
+            <span role="img" aria-label="picture">🖼️</span> HTML Image Compressor
+        </h1>
+        <p class="text-center text-gray-600 mb-8 text-lg">
+            Upload a JPG or PNG image to compress it to approximately 800 KB.
+        </p>
+
+        <!-- File input area -->
+        <div class="mb-8 p-4 border-2 border-dashed border-blue-300 rounded-lg text-center bg-blue-50 hover:bg-blue-100 transition-colors duration-200">
+            <label for="file-upload" class="cursor-pointer">
+                <input
+                    id="file-upload"
+                    type="file"
+                    accept="image/jpeg, image/png"
+                    class="hidden"
+                />
+                <span class="text-blue-600 font-semibold text-lg">Click to upload an image</span>
+                <p class="text-gray-500 text-sm mt-1">(JPG or PNG, max 800 KB output)</p>
+            </label>
+        </div>
+
+        <!-- Error display -->
+        <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md relative mb-6" role="alert">
+            <span class="block sm:inline"></span>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="loading-indicator" class="hidden flex items-center justify-center mb-6">
+            <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+            <p class="ml-3 text-blue-600 font-medium">Compressing image...</p>
+        </div>
+
+        <!-- Image display area -->
+        <div id="image-display-area" class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 hidden">
+            <!-- Original Image Card -->
+            <div id="original-image-card" class="bg-gray-50 p-4 rounded-xl shadow-md flex flex-col items-center">
+                <h2 class="text-xl font-semibold text-gray-700 mb-3">Original Image</h2>
+                <p id="original-size" class="text-gray-500 text-sm mb-4">Size: 0 KB</p>
+                <div class="relative w-full h-64 bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center">
+                    <img id="original-image" src="" alt="Original" class="max-w-full max-h-full object-contain rounded-lg" />
+                </div>
+            </div>
+
+            <!-- Compressed Image Card -->
+            <div id="compressed-image-card" class="bg-green-50 p-4 rounded-xl shadow-md flex flex-col items-center">
+                <h2 class="text-xl font-semibold text-green-700 mb-3">Compressed Image</h2>
+                <p id="compressed-size" class="text-gray-500 text-sm mb-4">Size: 0 KB</p>
+                <div class="relative w-full h-64 bg-green-200 rounded-lg overflow-hidden flex items-center justify-center">
+                    <img id="compressed-image" src="" alt="Compressed" class="max-w-full max-h-full object-contain rounded-lg" />
+                </div>
+                <a
+                    id="download-button"
+                    href="#"
+                    download="compressed_image.jpg"
+                    class="mt-6 px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-lg hover:bg-green-700 transition-colors duration-200 text-center"
+                >
+                    Download Compressed Image
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- browser-image-compression library CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileInput = document.getElementById('file-upload');
+            const errorMessage = document.getElementById('error-message');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            const imageDisplayArea = document.getElementById('image-display-area');
+            const originalImageCard = document.getElementById('original-image-card');
+            const originalImage = document.getElementById('original-image');
+            const originalSizeSpan = document.getElementById('original-size');
+            const compressedImageCard = document.getElementById('compressed-image-card');
+            const compressedImage = document.getElementById('compressed-image');
+            const compressedSizeSpan = document.getElementById('compressed-size');
+            const downloadButton = document.getElementById('download-button');
+
+            let originalImageUrl = null;
+            let compressedImageUrl = null;
+
+            // Function to display error messages
+            function showError(message) {
+                errorMessage.querySelector('span').textContent = message;
+                errorMessage.classList.remove('hidden');
+            }
+
+            // Function to hide error messages
+            function hideError() {
+                errorMessage.classList.add('hidden');
+                errorMessage.querySelector('span').textContent = '';
+            }
+
+            // Function to show loading indicator
+            function showLoading() {
+                loadingIndicator.classList.remove('hidden');
+            }
+
+            // Function to hide loading indicator
+            function hideLoading() {
+                loadingIndicator.classList.add('hidden');
+            }
+
+            // Function to reset image display
+            function resetDisplay() {
+                imageDisplayArea.classList.add('hidden');
+                originalImage.src = '';
+                originalSizeSpan.textContent = 'Size: 0 KB';
+                compressedImage.src = '';
+                compressedSizeSpan.textContent = 'Size: 0 KB';
+                downloadButton.href = '#';
+
+                if (originalImageUrl) URL.revokeObjectURL(originalImageUrl);
+                if (compressedImageUrl) URL.revokeObjectURL(compressedImageUrl);
+                originalImageUrl = null;
+                compressedImageUrl = null;
+            }
+
+            fileInput.addEventListener('change', async (event) => {
+                hideError();
+                resetDisplay(); // Reset previous images and data
+
+                const file = event.target.files[0];
+                if (!file) {
+                    return; // No file selected
+                }
+
+                // Validate file type
+                if (!['image/jpeg', 'image/png'].includes(file.type)) {
+                    showError('Please upload a JPG or PNG image.');
+                    fileInput.value = ''; // Clear file input
+                    return;
+                }
+
+                // Show original image
+                originalImageUrl = URL.createObjectURL(file);
+                originalImage.src = originalImageUrl;
+                originalSizeSpan.textContent = `Size: ${(file.size / 1024).toFixed(2)} KB`;
+                imageDisplayArea.classList.remove('hidden');
+                originalImageCard.classList.remove('hidden');
+                compressedImageCard.classList.add('hidden'); // Hide compressed card until compression is done
+
+                showLoading(); // Show loading indicator
+
+                const options = {
+                    maxSizeMB: 0.8, // Target maximum size in MB (0.8 MB = 800 KB)
+                    maxWidthOrHeight: 1920, // Max width or height
+                    useWebWorker: true, // Use web workers for better performance
+                    fileType: file.type === 'image/jpeg' ? 'image/jpeg' : 'image/png', // Preserve original file type
+                };
+
+                try {
+                    const compressedFile = await imageCompression(file, options);
+
+                    compressedImageUrl = URL.createObjectURL(compressedFile);
+                    compressedImage.src = compressedImageUrl;
+                    compressedSizeSpan.textContent = `Size: ${(compressedFile.size / 1024).toFixed(2)} KB`;
+                    downloadButton.href = compressedImageUrl;
+                    downloadButton.download = `compressed_image_${Date.now()}.${file.name.split('.').pop()}`;
+
+                    compressedImageCard.classList.remove('hidden'); // Show compressed card
+                } catch (compressionError) {
+                    console.error("Error during compression:", compressionError);
+                    showError('Failed to compress image. Please try again.');
+                    resetDisplay(); // Clear display on error
+                } finally {
+                    hideLoading(); // Hide loading indicator
+                    fileInput.value = ''; // Clear file input for next upload
+                }
+            });
+        });
+    </script>
+</body>
+</html>
